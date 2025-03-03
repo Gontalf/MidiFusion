@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MidiFusion</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .box {
+            width: 300px;
+            padding: 20px;
+            border: 2px solid #000;
+            min-height: 200px;
+        }
+        #fileList, #downloadSection {
+            text-align: left;
+        }
+        #status {
+            color: green;
+            font-weight: bold;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>MidiFusion</h1>
+    <div class="container">
+        <div class="box">
+            <button onclick="document.getElementById('fileInput').click()">Subir Archivos</button>
+            <input type="file" id="fileInput" multiple accept=".mid" style="display:none" onchange="updateFileList()">
+            <ul id="fileList"></ul>
+        </div>
+        <div class="box">
+            <button onclick="uploadAndCombine()">Combinar</button>
+            <div id="downloadSection">
+                <p id="status">Está listo, presione click para descargar</p>
+                <a id="downloadLink" style="display:none">Descargar MIDI combinado</a>
+                <p id="fileName" style="display:none; font-weight: bold;"></p>
+            </div>
+        </div>
+    </div>
+    <script>
+        function updateFileList() {
+            let input = document.getElementById('fileInput');
+            let files = Array.from(input.files);
+            let fileList = document.getElementById('fileList');
+            fileList.innerHTML = "";
+            files.sort((a, b) => a.name.localeCompare(b.name));
+            files.forEach(file => {
+                let li = document.createElement("li");
+                li.textContent = file.name;
+                fileList.appendChild(li);
+            });
+        }
+
+        function uploadAndCombine() {
+            let input = document.getElementById('fileInput');
+            let files = input.files;
+            if (files.length === 0) {
+                alert("No se han seleccionado archivos.");
+                return;
+            }
+
+            let formData = new FormData();
+            for (let file of files) {
+                formData.append("files", file);
+            }
+
+            fetch("http://127.0.0.1:5000/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                let fileName = generateRandomFileName();
+                let url = window.URL.createObjectURL(blob);
+                let link = document.getElementById("downloadLink");
+                link.href = url;
+                link.download = fileName;
+                link.style.display = "block";
+                link.textContent = "Descargar MIDI combinado";
+                
+                document.getElementById("status").style.display = "block";
+                document.getElementById("fileName").textContent = fileName + ".mid";
+                document.getElementById("fileName").style.display = "block";
+                
+                link.click(); // Descarga automática
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
+        function generateRandomFileName() {
+            let chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let fileName = '';
+            for (let i = 0; i < 10; i++) {
+                fileName += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return fileName;
+        }
+    </script>
+</body>
+</html>
